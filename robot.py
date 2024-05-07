@@ -32,6 +32,6 @@ class LilRedRobot(TimedCommandRobot):
     def teleopPeriodic(self):
         forward = self.joystick.getX()
         rotation = self.joystick.getY()
-        self.drivetrain.arcadeDrive(forward, rotation)
+        self.drivetrain.arcadeDrive(rotation, forward)
 
 
