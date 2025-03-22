@@ -5,11 +5,16 @@ import ntcore
 import wpilib
 import wpilib.drive
 import romi
+from wpimath.controller import SimpleMotorFeedforwardMeters
+from wpimath.kinematics import ChassisSpeeds, DifferentialDriveKinematics
+
 
 
 class Drivetrain(commands2.Subsystem):
     kCountsPerRevolution = 1440.0
     kWheelDiameterInch = 2.75591
+    MAX_LINEAR_SPEED=.75 #meters per second (down from theoretical max of .89)
+    MAX_ANGULAR_SPEED=10 # radians per second (down from theoretical max of 12.6)
 
     def __init__(self) -> None:
         super().__init__()
@@ -42,6 +47,12 @@ class Drivetrain(commands2.Subsystem):
         )
         self.resetEncoders()
 
+        # Values calculated for ROMI 1
+        self.feedforward_left = SimpleMotorFeedforwardMeters(kS=0.4436, kV=2.3234, kA=0)  # Your constants
+        self.feedforward_right = SimpleMotorFeedforwardMeters(kS=0.39921, kV=2.3418, kA=0.3)  # Your constants
+
+        self.kinematics = DifferentialDriveKinematics(trackWidth=0.14)  # ROMI width in meters
+
     def arcadeDrive(self, fwd: float, rot: float) -> None:
         """
         Drives the robot using arcade controls.
@@ -49,7 +60,26 @@ class Drivetrain(commands2.Subsystem):
         :param fwd: the commanded forward movement
         :param rot: the commanded rotation
         """
-        self.drive.arcadeDrive(rot, fwd)
+        # 1. Get arcade drive input
+        fwd = -fwd * self.MAX_LINEAR_SPEED  # forward
+        rot = rot * self.MAX_ANGULAR_SPEED # rotation
+
+        # 2. Convert to chassis speeds
+        chassis_speeds = ChassisSpeeds(fwd, 0.0, rot)
+
+        # 3. Convert chassis speeds to wheel speeds
+        wheel_speeds = self.kinematics.toWheelSpeeds(chassis_speeds)
+
+        left_speed = wheel_speeds.left / (self.kWheelDiameterInch *.0254 * math.pi) # Rotations per second
+        right_speed = wheel_speeds.right/ (self.kWheelDiameterInch *.0254 * math.pi)
+
+        # 4. Use feedforward to get voltages
+        left_voltage = self.feedforward_left.calculate(left_speed)
+        right_voltage = self.feedforward_right.calculate(right_speed)
+
+        # 5. Send voltages to motors
+        self.leftMotor.setVoltage(left_voltage)
+        self.rightMotor.setVoltage(right_voltage)
 
     def resetEncoders(self) -> None:
         """Resets the drive encoders to currently read a position of 0."""
