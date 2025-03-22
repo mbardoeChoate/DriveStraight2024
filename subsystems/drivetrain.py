@@ -47,7 +47,7 @@ class Drivetrain(commands2.Subsystem):
         )
         self.resetEncoders()
 
-        # Values calculated for ROMI 1
+        # Values calculated for ROMI 1 at home on 3/22/25
         self.feedforward_left = SimpleMotorFeedforwardMeters(kS=0.4436, kV=2.3234, kA=0)  # Your constants
         self.feedforward_right = SimpleMotorFeedforwardMeters(kS=0.39921, kV=2.3418, kA=0.3)  # Your constants
 
